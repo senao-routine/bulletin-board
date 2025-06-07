@@ -7,7 +7,8 @@ import {
   query, 
   orderBy,
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { recordUserActivity } from "./analytics";
@@ -22,7 +23,46 @@ export interface Post {
   isPopular?: boolean;
 }
 
-// Firestoreからすべての投稿を取得
+// リアルタイムでの投稿監視（リスナー）
+export function subscribeToPostsUpdates(
+  onUpdate: (posts: Post[]) => void, 
+  onError: (error: Error) => void
+): () => void {
+  const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+  
+  // onSnapshotはリスナーを返す
+  const unsubscribe = onSnapshot(
+    postsQuery,
+    (snapshot) => {
+      const postsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Firestoreのタイムスタンプを日付に変換
+        const createdAt = data.createdAt instanceof Timestamp 
+          ? data.createdAt.toDate() 
+          : new Date(data.createdAt);
+        
+        return {
+          id: doc.id,
+          title: data.title,
+          content: data.content,
+          author: data.author,
+          createdAt,
+          views: data.views || 0,
+          isPopular: data.isPopular || false
+        } as Post;
+      });
+      
+      onUpdate(postsData);
+    },
+    onError
+  );
+  
+  // コンポーネントのアンマウント時にリスナーを解除するための関数を返す
+  return unsubscribe;
+}
+
+// 一度限りの投稿取得（バックアップとして残す）
 export async function getPosts(): Promise<Post[]> {
   try {
     const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));

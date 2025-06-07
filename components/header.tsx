@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { MessageSquare, Plus, User, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getPosts } from "@/lib/firebase-posts"
+import { getPosts, subscribeToPostsUpdates } from "@/lib/firebase-posts"
 import { getTodayActiveUsers, recordVisitor, cleanupOldActivity } from "@/lib/analytics"
 
 interface HeaderProps {
@@ -28,19 +28,24 @@ export function Header({ postCount = 0 }: HeaderProps) {
 
     // 投稿数を取得（propsで渡されていない場合）
     if (postCount === 0) {
-      const fetchPostCount = async () => {
-        try {
-          const posts = await getPosts();
+      // リアルタイムリスナーを設定
+      const unsubscribe = subscribeToPostsUpdates(
+        // データが更新されたときのコールバック
+        (posts) => {
           setPostCounts(posts.length);
-        } catch (error) {
+          setLoading(false);
+        },
+        // エラー発生時のコールバック
+        (error) => {
           console.error("投稿の取得中にエラーが発生しました:", error);
-        } finally {
           setLoading(false);
         }
-      };
+      );
       
-      fetchPostCount();
+      // コンポーネントのクリーンアップ時にリスナーを解除
+      return () => unsubscribe();
     } else {
+      setPostCounts(postCount);
       setLoading(false);
     }
   }, [postCount])

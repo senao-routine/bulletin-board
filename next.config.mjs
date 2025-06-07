@@ -11,7 +11,7 @@ const nextConfig = {
   },
   output: 'export',
   // Firebaseでのホスティングに必要な設定
-  trailingSlash: true,
+  trailingSlash: false,
   distDir: 'out',
 }
 

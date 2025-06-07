@@ -39,6 +39,11 @@ export default function NewPostPage() {
       if (result) {
         // 成功メッセージ
         alert("投稿が完了しました！")
+        
+        // 投稿完了後にフォームをリセット
+        setContent("");
+        setAuthor("");
+        
         // 投稿一覧ページにリダイレクト
         router.push("/")
       } else {

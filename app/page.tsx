@@ -20,7 +20,7 @@ import { Header } from "@/components/header"
 import { MessageCircle, MessageSquare, Star, User, Calendar, Trash2, AlertTriangle, Eye, Trash } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { getPosts, deletePost, deleteAllPosts, type Post } from "@/lib/firebase-posts"
+import { getPosts, deletePost, deleteAllPosts, subscribeToPostsUpdates, type Post } from "@/lib/firebase-posts"
 import { AdminLogin } from "@/components/admin-login"
 import { isAdminLoggedIn, adminLogin } from "@/lib/admin"
 
@@ -33,23 +33,29 @@ export default function PostListPage() {
   const [deleteAllPassword, setDeleteAllPassword] = useState("")
   const [deleteAllError, setDeleteAllError] = useState("")
 
-  // 投稿データの読み込み
+  // 投稿データの読み込み（リアルタイム）
   useEffect(() => {
     setIsAdmin(isAdminLoggedIn())
     
-    const fetchPosts = async () => {
-      setLoading(true);
-      try {
-        const postsData = await getPosts();
+    // 初期状態を読み込み中に設定
+    setLoading(true);
+    
+    // リアルタイムリスナーを設定
+    const unsubscribe = subscribeToPostsUpdates(
+      // データが更新されたときのコールバック
+      (postsData) => {
         setPosts(postsData);
-      } catch (error) {
+        setLoading(false);
+      },
+      // エラー発生時のコールバック
+      (error) => {
         console.error("投稿の取得中にエラーが発生しました:", error);
-      } finally {
         setLoading(false);
       }
-    };
+    );
     
-    fetchPosts();
+    // コンポーネントのクリーンアップ時にリスナーを解除
+    return () => unsubscribe();
   }, [])
 
   const formatDate = (date: Date) => {
@@ -87,9 +93,7 @@ export default function PostListPage() {
     try {
       const success = await deletePost(postId);
       if (success) {
-        // 成功したら投稿リストを更新
-        const updatedPosts = await getPosts();
-        setPosts(updatedPosts);
+        // リアルタイムリスナーが自動的に更新するため、再取得は不要
         setDeleteConfirm(null);
         alert("投稿を削除しました");
       } else {
@@ -127,7 +131,7 @@ export default function PostListPage() {
     try {
       const success = await deleteAllPosts();
       if (success) {
-        setPosts([]);
+        // リアルタイムリスナーが自動的に更新するため、再設定は不要
         setShowDeleteAllDialog(false);
         setDeleteAllPassword("");
         setDeleteAllError("");
