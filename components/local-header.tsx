@@ -4,17 +4,14 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { MessageSquare, Plus, User, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getPosts } from "@/lib/firebase-posts"
 import { getTodayActiveUsers, recordVisitor, cleanupOldActivity } from "@/lib/analytics"
 
 interface HeaderProps {
-  postCount?: number
+  postCount: number
 }
 
-export function Header({ postCount = 0 }: HeaderProps) {
+export function Header({ postCount }: HeaderProps) {
   const [activeUsers, setActiveUsers] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [postCounts, setPostCounts] = useState(postCount)
 
   useEffect(() => {
     // ページ訪問を記録
@@ -25,25 +22,7 @@ export function Header({ postCount = 0 }: HeaderProps) {
 
     // 古いデータをクリーンアップ
     cleanupOldActivity()
-
-    // 投稿数を取得（propsで渡されていない場合）
-    if (postCount === 0) {
-      const fetchPostCount = async () => {
-        try {
-          const posts = await getPosts();
-          setPostCounts(posts.length);
-        } catch (error) {
-          console.error("投稿の取得中にエラーが発生しました:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      fetchPostCount();
-    } else {
-      setLoading(false);
-    }
-  }, [postCount])
+  }, [])
 
   return (
     <div className="blackboard-bg bg-green-900 border-b-8 border-amber-800 text-white shadow-2xl relative">
@@ -81,11 +60,7 @@ export function Header({ postCount = 0 }: HeaderProps) {
           <div className="flex flex-wrap items-center justify-center gap-8 mt-5 text-sm">
             <div className="flex items-center gap-2 px-4 py-2 bg-green-950/60 rounded-full border border-white/20">
               <User className="h-4 w-4 text-white" />
-              <span className="text-white font-chalk">
-                総投稿数: <span className="font-bold text-yellow-chalk">
-                  {loading ? "読み込み中..." : postCounts}
-                </span>
-              </span>
+              <span className="text-white font-chalk">総投稿数: <span className="font-bold text-yellow-chalk">{postCount}</span></span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-green-950/60 rounded-full border border-white/20">
               <TrendingUp className="h-4 w-4 text-white" />

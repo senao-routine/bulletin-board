@@ -5,12 +5,13 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Header } from "@/components/header"
 import { Plus, User, MessageSquare } from "lucide-react"
-import { addPost, getPosts } from "@/lib/firebase-posts"
+import { addPost, getPosts } from "@/lib/posts"
 
 export default function NewPostPage() {
   const router = useRouter()
@@ -30,21 +31,17 @@ export default function NewPostPage() {
 
     try {
       // 新しい投稿を追加
-      const result = await addPost({
+      addPost({
         title: "コメント", // タイトルは固定値を使用
         content: content.trim(),
         author: author.trim(),
-      });
+      })
 
-      if (result) {
-        // 成功メッセージ
-        alert("投稿が完了しました！")
-        // 投稿一覧ページにリダイレクト
-        router.push("/")
-      } else {
-        alert("投稿の保存に失敗しました。もう一度お試しください。")
-        setIsSubmitting(false)
-      }
+      // 成功メッセージ
+      alert("投稿が完了しました！")
+
+      // 投稿一覧ページにリダイレクト
+      router.push("/")
     } catch (error) {
       console.error("投稿の保存中にエラーが発生しました:", error)
       alert("投稿の保存中にエラーが発生しました。もう一度お試しください。")
@@ -68,7 +65,7 @@ export default function NewPostPage() {
         }}></div>
       </div>
 
-      <Header postCount={0} />
+      <Header postCount={getPosts().length} />
 
       <div className="container mx-auto px-4 py-8 max-w-5xl relative z-10">
         {/* コミュニティルール - 黒板スタイル */}

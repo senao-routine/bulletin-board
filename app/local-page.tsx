@@ -20,14 +20,13 @@ import { Header } from "@/components/header"
 import { MessageCircle, MessageSquare, Star, User, Calendar, Trash2, AlertTriangle, Eye, Trash } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { getPosts, deletePost, deleteAllPosts, type Post } from "@/lib/firebase-posts"
+import { getPosts, deletePost, deleteAllPosts, type Post } from "@/lib/posts"
 import { AdminLogin } from "@/components/admin-login"
 import { isAdminLoggedIn, adminLogin } from "@/lib/admin"
 
 export default function PostListPage() {
   const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false)
   const [deleteAllPassword, setDeleteAllPassword] = useState("")
@@ -35,21 +34,8 @@ export default function PostListPage() {
 
   // 投稿データの読み込み
   useEffect(() => {
+    setPosts(getPosts())
     setIsAdmin(isAdminLoggedIn())
-    
-    const fetchPosts = async () => {
-      setLoading(true);
-      try {
-        const postsData = await getPosts();
-        setPosts(postsData);
-      } catch (error) {
-        console.error("投稿の取得中にエラーが発生しました:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchPosts();
   }, [])
 
   const formatDate = (date: Date) => {
@@ -81,27 +67,16 @@ export default function PostListPage() {
     return name.slice(0, 2).toUpperCase()
   }
 
-  const handleDelete = async (postId: string) => {
+  const handleDelete = (postId: number) => {
     if (!isAdmin) return
 
-    try {
-      const success = await deletePost(postId);
-      if (success) {
-        // 成功したら投稿リストを更新
-        const updatedPosts = await getPosts();
-        setPosts(updatedPosts);
-        setDeleteConfirm(null);
-        alert("投稿を削除しました");
-      } else {
-        alert("投稿の削除に失敗しました");
-      }
-    } catch (error) {
-      console.error("投稿の削除中にエラーが発生しました:", error);
-      alert("投稿の削除中にエラーが発生しました");
-    }
+    deletePost(postId)
+    setPosts(getPosts())
+    setDeleteConfirm(null)
+    alert("投稿を削除しました")
   }
 
-  const confirmDelete = (postId: string) => {
+  const confirmDelete = (postId: number) => {
     if (!isAdmin) return
     setDeleteConfirm(postId)
   }
@@ -114,7 +89,7 @@ export default function PostListPage() {
     setIsAdmin(loggedIn)
   }
 
-  const handleDeleteAllPosts = async () => {
+  const handleDeleteAllPosts = () => {
     if (!isAdmin) return
 
     // パスワード確認
@@ -124,21 +99,12 @@ export default function PostListPage() {
     }
 
     // 全削除実行
-    try {
-      const success = await deleteAllPosts();
-      if (success) {
-        setPosts([]);
-        setShowDeleteAllDialog(false);
-        setDeleteAllPassword("");
-        setDeleteAllError("");
-        alert("すべての投稿を削除しました");
-      } else {
-        setDeleteAllError("投稿の削除に失敗しました");
-      }
-    } catch (error) {
-      console.error("全投稿の削除中にエラーが発生しました:", error);
-      setDeleteAllError("投稿の削除中にエラーが発生しました");
-    }
+    deleteAllPosts()
+    setPosts([])
+    setShowDeleteAllDialog(false)
+    setDeleteAllPassword("")
+    setDeleteAllError("")
+    alert("すべての投稿を削除しました")
   }
 
   const openDeleteAllDialog = () => {
@@ -228,14 +194,7 @@ export default function PostListPage() {
             </div>
           </div>
 
-          {loading ? (
-            <div className="blackboard-bg bg-green-900 rounded-xl shadow-2xl p-16 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-4">
-                <div className="h-12 w-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
-                <p className="text-white text-lg font-chalk">コメントを読み込み中...</p>
-              </div>
-            </div>
-          ) : posts.length === 0 ? (
+          {posts.length === 0 ? (
             <div className="relative">
               {/* 黒板風の背景 */}
               <div className="blackboard-bg bg-green-900 rounded-xl shadow-2xl pb-10 pt-8 px-8">
@@ -299,9 +258,14 @@ export default function PostListPage() {
                   <div className="h-6 w-16 bg-yellow-200 rounded-sm shadow-md transform -rotate-6"></div>
                 </div>
               </div>
+              
+              {/* 背景装飾 - 教室風 */}
+              <div className="absolute -z-10 -top-4 -right-4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl"></div>
+              <div className="absolute -z-10 -bottom-8 -left-8 w-32 h-32 bg-amber-500/10 rounded-full blur-xl"></div>
+              
             </div>
           ) : (
-            posts.map((post) => (
+            posts.map((post, index) => (
               <div
                 key={post.id}
                 className="mb-6 relative group"
@@ -360,23 +324,26 @@ export default function PostListPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0 pb-6 px-6">
-                    {/* ノートを模した見た目 */}
-                    <div className="bg-white p-6 rounded-md mb-5 shadow-md relative border border-slate-200">
-                      {/* 罫線効果 */}
+                    {/* 黒板を模した見た目 */}
+                    <div className="bg-green-950 p-6 rounded-md mb-5 shadow-md relative border border-amber-500">
+                      {/* チョークダストのような効果 */}
+                      <div className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-20 chalk-dust"></div>
+                      
+                      {/* チョークの罫線効果 */}
                       <div className="absolute inset-0 pointer-events-none" style={{
-                        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 24px, #e5e7eb 24px, #e5e7eb 25px)',
+                        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.15) 19px, rgba(255,255,255,0.15) 20px)',
                         backgroundPosition: '0 25px', // 最初の線の位置を調整
-                        backgroundSize: '25px 25px',
+                        backgroundSize: '20px 20px',
                       }}></div>
                       
-                      {/* 左マージン効果（赤い縦線） */}
-                      <div className="absolute top-0 left-5 bottom-0 w-0.5 bg-red-400"></div>
+                      {/* チョーク跡の装飾 */}
+                      <div className="absolute top-0 left-5 bottom-0 w-0.5 bg-yellow-200/50"></div>
                       
-                      {/* 上部のパンチ穴 */}
-                      <div className="absolute top-2 left-2 w-2.5 h-2.5 bg-slate-100 border border-slate-200 rounded-full shadow-inner"></div>
-                      <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-slate-100 border border-slate-200 rounded-full shadow-inner"></div>
+                      {/* チョークの点 */}
+                      <div className="absolute top-2 left-2 w-2.5 h-2.5 bg-white/30 rounded-full"></div>
+                      <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-white/30 rounded-full"></div>
                       
-                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-lg relative z-10 pl-8 ml-2">{post.content}</p>
+                      <p className="text-white leading-relaxed whitespace-pre-wrap text-lg relative z-10 pl-8 ml-2 font-chalk text-shadow-chalk">{post.content}</p>
                     </div>
 
                     {isAdmin && deleteConfirm === post.id && (
