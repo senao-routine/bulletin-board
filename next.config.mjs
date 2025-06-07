@@ -9,6 +9,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'export',
+  // Firebaseでのホスティングに必要な設定
+  trailingSlash: true,
+  distDir: 'out',
 }
 
 export default nextConfig
